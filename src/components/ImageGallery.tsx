@@ -1,113 +1,118 @@
 // components/ImageGallery.tsx
-'use client'
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useInView } from 'react-intersection-observer'
-import { Image, StreamResponse } from '@/types'
-import { Progress } from '@/components/ui/progress'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useInView } from "react-intersection-observer";
+import type { Image, StreamResponse } from "../../types";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function ImageGallery() {
-  const [images, setImages] = useState<Image[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [hasNextPage, setHasNextPage] = useState(true)
-  const [progress, setProgress] = useState<{ processed: number; total: number } | null>(null)
-  const continuationTokenRef = useRef<string | undefined>()
-  const abortControllerRef = useRef<AbortController | null>(null)
+  const [images, setImages] = useState<Image[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [progress, setProgress] = useState<{
+    processed: number;
+    total: number;
+  } | null>(null);
+  const continuationTokenRef = useRef<string | undefined>();
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const { ref: loadMoreRef, inView } = useInView({
     threshold: 0,
-    rootMargin: '400px'
-  })
+    rootMargin: "400px",
+  });
 
   const loadImages = useCallback(async () => {
-    if (loading || !hasNextPage) return
+    if (loading || !hasNextPage) return;
 
     try {
-      setLoading(true)
-      setError(null)
-      
-      abortControllerRef.current = new AbortController()
+      setLoading(true);
+      setError(null);
 
-      const url = new URL('/api/images', window.location.origin)
+      abortControllerRef.current = new AbortController();
+
+      const url = new URL("/api/images", window.location.origin);
       if (continuationTokenRef.current) {
-        url.searchParams.set('continuationToken', continuationTokenRef.current)
+        url.searchParams.set("continuationToken", continuationTokenRef.current);
       }
 
       const response = await fetch(url, {
-        signal: abortControllerRef.current.signal
-      })
+        signal: abortControllerRef.current.signal,
+      });
 
-      if (!response.ok) throw new Error('Network response was not ok')
-      
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No reader available')
+      if (!response.ok) throw new Error("Network response was not ok");
 
-      const decoder = new TextDecoder()
-      let buffer = ''
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No reader available");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
 
       while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-        
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
         for (const line of lines) {
-          if (!line.trim()) continue
-          
+          if (!line.trim()) continue;
+
           try {
-            const data: StreamResponse = JSON.parse(line)
-            
+            const data: StreamResponse = JSON.parse(line);
+
             switch (data.status) {
-              case 'processing':
+              case "processing":
                 if (data.progress) {
-                  setProgress(data.progress)
+                  setProgress(data.progress);
                 }
-                break
-                
-              case 'complete':
+                break;
+
+              case "complete":
                 if (data.images) {
-                  setImages(prev => [...prev, ...data.images])
-                  setHasNextPage(data.hasMore || false)
-                  continuationTokenRef.current = data.continuationToken
+                  setImages((prev) => [...prev, ...data.images as Image[]]);
+                  setHasNextPage(data.hasMore || false);
+                  continuationTokenRef.current = data.continuationToken;
                 }
-                break
-                
-              case 'error':
-                throw new Error(data.error || 'Unknown error occurred')
+                break;
+
+              case "error":
+                throw new Error(data.error || "Unknown error occurred");
             }
           } catch (e) {
-            console.error('Error parsing stream data:', e)
+            console.error("Error parsing stream data:", e);
           }
         }
       }
     } catch (err) {
       if (err instanceof Error) {
-        setError(err.name === 'AbortError' ? 'Request was cancelled' : err.message)
+        setError(
+          err.name === "AbortError" ? "Request was cancelled" : err.message
+        );
       }
     } finally {
-      setLoading(false)
-      setProgress(null)
-      abortControllerRef.current = null
+      setLoading(false);
+      setProgress(null);
+      abortControllerRef.current = null;
     }
-  }, [loading, hasNextPage])
+  }, [loading, hasNextPage]);
 
   useEffect(() => {
     if (inView) {
-      loadImages()
+      loadImages();
     }
-  }, [inView, loadImages])
+  }, [inView, loadImages]);
 
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
+        abortControllerRef.current.abort();
       }
-    }
-  }, [])
+    };
+  }, []);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -128,8 +133,8 @@ export function ImageGallery() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {images.map((image) => (
-          <div 
-            key={image.id} 
+          <div
+            key={image.id}
             className="aspect-square bg-neutral-100 rounded-lg overflow-hidden"
           >
             <img
@@ -148,5 +153,5 @@ export function ImageGallery() {
         )}
       </div>
     </div>
-  )
+  );
 }
