@@ -5,18 +5,32 @@ import Image from "next/image";
 export function ImageCard({ image }: { image: any }) {
   const handleDownload = async () => {
     try {
-      const response = await fetch(image.url);
+      // Create the API URL with the image URL and filename as parameters
+      const apiUrl = `/api/download?url=${encodeURIComponent(image.url)}&fileName=${encodeURIComponent(image.fileName || 'image.png')}`;
+      
+      // Fetch from our API route
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+      
+      // Create a blob from the response
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
+      
+      // Create a temporary link and trigger the download
+      const link = document.createElement('a');
       link.href = url;
-      link.download = image.fileName || "image";
+      link.download = image.fileName || 'image.png';
       document.body.appendChild(link);
       link.click();
+      
+      // Clean up
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Error downloading image:", error);
+      console.error('Error downloading image:', error);
     }
   };
 
