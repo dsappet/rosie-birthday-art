@@ -6,6 +6,7 @@ import { useInView } from "react-intersection-observer";
 import type { Image, StreamResponse } from "../../types";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ImageCard } from "./ImageCard";
 
 export function ImageGallery() {
   const [images, setImages] = useState<Image[]>([]);
@@ -73,7 +74,7 @@ export function ImageGallery() {
 
               case "complete":
                 if (data.images) {
-                  setImages((prev) => [...prev, ...data.images as Image[]]);
+                  setImages((prev) => [...prev, ...(data.images as Image[])]);
                   setHasNextPage(data.hasMore || false);
                   continuationTokenRef.current = data.continuationToken;
                 }
@@ -133,17 +134,7 @@ export function ImageGallery() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {images.map((image) => (
-          <div
-            key={image.id}
-            className="aspect-square bg-neutral-100 rounded-lg overflow-hidden"
-          >
-            <img
-              src={image.url}
-              alt={image.fileName}
-              className="w-full h-full object-cover transition-opacity duration-300 hover:opacity-90"
-              loading="lazy"
-            />
-          </div>
+          <ImageCard key={image.id} image={image} />
         ))}
       </div>
 
